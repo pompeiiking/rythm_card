@@ -1,0 +1,212 @@
+[gd_scene load_steps=2 format=3 uid="uid://c7qbjc486a0pk"]
+
+[sub_resource type="GDScript" id="GDScript_dj4a2"]
+script/source = "extends Node
+class_name TestRhythmAxis
+## 节奏轴模块测试脚本
+##
+## 测试内容：
+## 1. 模块初始化和生命周期
+## 2. 配置加载
+## 3. 输入策略切换
+## 4. 事件通信
+## 5. 判定逻辑
+##
+## 操作说明：
+## - 空格键：单键判定
+## - A键：多键判定测试
+## - S键：多键判定测试
+## - 1键：切换到单键判定模式
+## - 2键：切换到多键判定模式（A+S）
+## - 3键：切换到顺序按键判定模式（A→S→D）
+## - R键：重新开始测试
+## - ESC键：退出测试
+
+# 测试的节奏轴模块
+var _rhythm_module: RhythmAxisModule = null
+
+# 测试状态
+var _test_started: bool = false
+
+# 测试结果
+var _test_results: Array[String] = []
+
+# 输入冷却（防止每帧都触发）
+var _input_cooldown: float = 0.0
+const INPUT_COOLDOWN_TIME: float = 0.1  # 100ms 冷却时间
+
+func _ready() -> void:
+	print(\"[TestRhythmAxis] _ready 被调用\")
+	_setup_ui()
+	_init_module()
+	_subscribe_events()
+
+func _process(_delta: float) -> void:
+	# 更新输入冷却
+	if _input_cooldown > 0:
+		_input_cooldown -= _delta
+   	
+	# 处理输入请求（每帧检测空格键，使用冷却防止连续触发）
+	if _test_started and _input_cooldown <= 0 and Input.is_key_pressed(KEY_SPACE):
+		_input_cooldown = INPUT_COOLDOWN_TIME
+		EventBus.fire(\"rhythm:input_requested\", {})
+
+func _input(event: InputEvent) -> void:
+	print(\"[TestRhythmAxis] 收到输入事件: \", event)
+	
+	# 先检查是否是按键事件
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ESCAPE:
+			_cleanup()
+			get_tree().quit()
+			return
+	
+	if not _test_started:
+		return
+	
+	# 监听按键事件用于顺序按键判定
+	if event is InputEventKey and event.pressed:
+		var key_code: int = event.keycode
+		
+		# 处理测试快捷键
+		match key_code:
+			KEY_R:
+				_restart_test()
+			KEY_1:
+				_switch_to_single_key()
+			KEY_2:
+				_switch_to_multi_key()
+			KEY_3:
+				_switch_to_sequential_keys()
+			KEY_ESCAPE:
+				_cleanup()
+				get_tree().quit()
+				return
+		
+		# 触发输入请求
+		EventBus.fire(\"rhythm:input_requested\", {\"key_code\": key_code})
+
+func _setup_ui() -> void:
+	# 创建测试说明UI
+	var label = Label.new()
+	label.name = \"TestInfo\"
+	label.text = \"\"\"=== 节奏轴测试 ===
+操作说明：
+- 空格键：触发判定
+- 1键：单键判定模式（空格）
+- 2键：多键判定模式（A+S同时按）
+- 3键：顺序按键模式（A→S→D）
+- R键：重新开始
+- ESC键：退出
+\"\"\"
+	label.position = Vector2(10, 10)
+	label.add_theme_font_size_override(\"font_size\", 16)
+	add_child(label)
+	
+	# 创建状态显示
+	var status_label = Label.new()
+	status_label.name = \"StatusLabel\"
+	status_label.text = \"等待启动...\"
+	status_label.position = Vector2(10, 250)
+	status_label.add_theme_font_size_override(\"font_size\", 20)
+	add_child(status_label)
+	
+	# 创建结果显示
+	var result_label = Label.new()
+	result_label.name = \"ResultLabel\"
+	result_label.text = \"\"
+	result_label.position = Vector2(10, 300)
+	result_label.add_theme_font_size_override(\"font_size\", 14)
+	add_child(result_label)
+
+func _init_module() -> void:
+	_rhythm_module = RhythmAxisModule.new()
+	add_child(_rhythm_module)
+	_rhythm_module.initialize()
+	
+	# 默认使用单键判定
+	_rhythm_module.set_single_key_input(KEY_SPACE)
+	_update_status(\"初始化完成，按 R 开始测试\")
+
+func _subscribe_events() -> void:
+	EventBus.listen(\"rhythm:block_emitted\", self, \"_on_block_emitted\")
+	EventBus.listen(\"rhythm:beat\", self, \"_on_beat\")
+	EventBus.listen(\"rhythm:input_judged\", self, \"_on_input_judged\")
+	EventBus.listen(\"rhythm:block_reached_zone\", self, \"_on_block_reached_zone\")
+
+func _restart_test() -> void:
+	_test_results.clear()
+	_rhythm_module.stop()
+	_rhythm_module.cleanup()
+	_rhythm_module.initialize()
+	_rhythm_module.set_single_key_input(KEY_SPACE)
+	_rhythm_module.start()
+	_test_started = true
+	_input_cooldown = 0.0  # 重置冷却
+	_add_result(\"测试重新开始 (单键模式)\")
+	_update_status(\"测试运行中 - 单键判定模式\")
+	print(\"[TestRhythmAxis] 测试已启动，BPM=\", _rhythm_module.get_bpm())
+
+func _switch_to_single_key() -> void:
+	_rhythm_module.set_single_key_input(KEY_SPACE)
+	_add_result(\"切换到单键判定模式（空格）\")
+	_update_status(\"当前模式：单键判定\")
+
+func _switch_to_multi_key() -> void:
+	_rhythm_module.set_multi_key_input([KEY_A, KEY_S])
+	_add_result(\"切换到多键判定模式（A+S）\")
+	_update_status(\"当前模式：多键判定 - 同时按下A和S\")
+
+func _switch_to_sequential_keys() -> void:
+	_rhythm_module.set_sequential_keys_input([KEY_A, KEY_S, KEY_D], 1.0)
+	_add_result(\"切换到顺序按键模式（A→S→D）\")
+	_update_status(\"当前模式：顺序按键 - 依次按下A,S,D\")
+
+func _update_status(text: String) -> void:
+	var status_label = get_node_or_null(\"StatusLabel\") as Label
+	if status_label:
+		status_label.text = text
+
+func _update_results() -> void:
+	var result_label = get_node_or_null(\"ResultLabel\") as Label
+	if result_label:
+		result_label.text = \"\\n\".join(_test_results)
+
+func _add_result(text: String) -> void:
+	_test_results.append(text)
+	_update_results()
+
+# ========== 事件处理 ==========
+
+func _on_block_emitted(block_data: Dictionary) -> void:
+	_add_result(\"发射块: \" + str(block_data.get(\"block_id\", \"\")))
+
+func _on_beat(_data: Dictionary) -> void:
+	# 节拍事件，每秒触发多次
+	pass
+
+func _on_input_judged(data: Dictionary) -> void:
+	var result: int = data.get(\"result\", 3)
+	var result_text: String
+	match result:
+		1: result_text = \"PERFECT!\"
+		2: result_text = \"GOOD\"
+		3: result_text = \"MISS\"
+		_: result_text = \"未知\"
+	_add_result(\"判定结果: \" + result_text + \" (delta=\" + str(data.get(\"delta\", 0.0)) + \")\")
+
+func _on_block_reached_zone(_block_data: Dictionary) -> void:
+	_add_result(\"块到达判定区\")
+
+func _cleanup() -> void:
+	_test_started = false
+	if _rhythm_module:
+		_rhythm_module.cleanup()
+	EventBus.unlisten(\"rhythm:block_emitted\", self)
+	EventBus.unlisten(\"rhythm:beat\", self)
+	EventBus.unlisten(\"rhythm:input_judged\", self)
+	EventBus.unlisten(\"rhythm:block_reached_zone\", self)
+"
+
+[node name="TestRhythmAxis" type="Node2D"]
+script = SubResource("GDScript_dj4a2")
