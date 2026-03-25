@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://d3i6wup3pa2kr"]
+
+[node name="PageTurnEffect" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

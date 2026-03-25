@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://b2ponj44byuqx"]
+
+[ext_resource type="Script" uid="uid://chbk16hqw1l1c" path="res://scripts/MainScene.gd" id="1_rcsjo"]
+[ext_resource type="Script" uid="uid://dqs24obp24io2" path="res://scripts/PageManager.gd" id="2_7i1vd"]
+
+[node name="MainScene" type="Node2D"]
+script = ExtResource("1_rcsjo")
+
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0
+color = Color(0.5411765, 1, 1, 1)
+
+[node name="BookDecorations" type="Node" parent="."]
+
+[node name="PageManager" type="Node" parent="."]
+script = ExtResource("2_7i1vd")
