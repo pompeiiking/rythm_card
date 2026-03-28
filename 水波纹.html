@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>微动态材质滤镜 - 兼容增强版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .upload-area {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 24px;
+        }
+
+        .upload-area:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 1rem;
+        }
+
+        .upload-hint {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .control-group label {
+            display: block;
+            color: white;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.3);
+            height: 4px;
+            border-radius: 5px;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            cursor: pointer;
+        }
+
+        .value-display {
+            color: #ff6b6b;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .toggle-btn {
+            background: rgba(255, 107, 107, 0.8);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .toggle-btn:hover {
+            background: #ff6b6b;
+            transform: scale(1.02);
+        }
+
+        .canvas-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .info {
+            margin-top: 16px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .download-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 24px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .error-message {
+            background: rgba(255, 100, 100, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .control-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ 微动态材质滤镜 ✨</h1>
+        <div class="subtitle">整图微扭曲 | 兼容所有图片格式 | 自动压缩</div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-text">点击或拖拽上传图片</div>
+            <div class="upload-hint">支持 JPG、PNG、WEBP、BMP、GIF 等 | 自动处理大图</div>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/bmp,image/gif,image/*">
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>🌊 扭曲强度 <span style="color:#ff6b6b;">(微动)</span></label>
+                <input type="range" id="intensitySlider" min="0" max="8" step="0.2" value="2.5">
+                <div class="value-display" id="intensityValue">强度: 2.5</div>
+            </div>
+            <div class="control-group">
+                <label>🌀 动态速度</label>
+                <input type="range" id="speedSlider" min="0" max="2" step="0.1" value="0.8">
+                <div class="value-display" id="speedValue">速度: 0.8</div>
+            </div>
+            <div class="control-group">
+                <label>🎨 扭曲细腻度</label>
+                <input type="range" id="detailSlider" min="0.5" max="3" step="0.1" value="1.5">
+                <div class="value-display" id="detailValue">细腻度: 1.5</div>
+            </div>
+            <button class="toggle-btn" id="animateToggle">⏸️ 暂停动态</button>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="mainCanvas" width="600" height="400" style="width:100%; height:auto; max-width:600px; aspect-ratio:auto;"></canvas>
+            <div class="loading" id="loadingIndicator">🔄 处理中...</div>
+        </div>
+        <div class="info">
+            💡 整张图片会产生极其微妙的动态扭曲效果 | 大图会自动压缩保证流畅
+        </div>
+        <div class="btn-group">
+            <button class="download-btn" id="downloadBtn">📹 保存动态视频</button>
+        </div>
+        <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        const intensitySlider = document.getElementById('intensitySlider');
+        const speedSlider = document.getElementById('speedSlider');
+        const detailSlider = document.getElementById('detailSlider');
+        const intensityValue = document.getElementById('intensityValue');
+        const speedValue = document.getElementById('speedValue');
+        const detailValue = document.getElementById('detailValue');
+        const animateToggle = document.getElementById('animateToggle');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // 全局变量
+        let originalImage = null;
+        let animationId = null;
+        let time = 0;
+        let isAnimating = true;
+        
+        let intensity = 2.5;
+        let speed = 0.8;
+        let detail = 1.5;
+        
+        let hasImage = false;
+        
+        // 显示错误信息
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 隐藏错误
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+        
+        // 显示/隐藏加载中
+        function showLoading(show) {
+            loadingIndicator.style.display = show ? 'block' : 'none';
+        }
+        
+        function updateValueDisplays() {
+            intensityValue.innerText = `强度: ${intensity.toFixed(1)}`;
+            speedValue.innerText = `速度: ${speed.toFixed(1)}`;
+            detailValue.innerText = `细腻度: ${detail.toFixed(1)}`;
+        }
+        
+        intensitySlider.addEventListener('input', (e) => {
+            intensity = parseFloat(e.target.value);
+            updateValueDisplays();
+        });
+        
+        speedSlider.addEventListener('input', (e) => {
+            speed = parseFloat(e.target.value);
+            updateValueDisplays();
+        });
+        
+        detailSlider.addEventListener('input', (e) => {
+            detail = parseFloat(e.target.value);
+            updateValueDisplays();
+        });
+        
+        animateToggle.addEventListener('click', () => {
+            isAnimating = !isAnimating;
+            animateToggle.innerText = isAnimating ? "⏸️ 暂停动态" : "▶️ 启动动态";
+        });
+        
+        // 压缩图片大小（如果图片太大）
+        function compressImage(img, maxWidth = 800, maxHeight = 800) {
+            return new Promise((resolve, reject) => {
+                let width = img.width;
+                let height = img.height;
+                
+                // 如果图片已经足够小，直接返回
+                if (width <= maxWidth && height <= maxHeight) {
+                    resolve(img);
+                    return;
+                }
+                
+                // 计算缩放比例
+                let ratio = Math.min(maxWidth / width, maxHeight / height);
+                let newWidth = Math.floor(width * ratio);
+                let newHeight = Math.floor(height * ratio);
+                
+                // 创建临时canvas进行压缩
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = newWidth;
+                tempCanvas.height = newHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(img, 0, 0, newWidth, newHeight);
+                
+                // 创建新图片
+                const compressedImg = new Image();
+                compressedImg.onload = () => resolve(compressedImg);
+                compressedImg.onerror = () => reject(new Error('图片压缩失败'));
+                compressedImg.src = tempCanvas.toDataURL('image/jpeg', 0.92);
+            });
+        }
+        
+        // 核心绘制函数：整图微小扭曲
+        function drawSubtleDistortion(useCurrentTime = false) {
+            if (!originalImage || !ctx) return;
+            
+            try {
+                const imgWidth = originalImage.width;
+                const imgHeight = originalImage.height;
+                
+                // 限制最大显示尺寸，保证性能
+                const maxWidth = 600;
+                const maxHeight = 500;
+                let drawWidth = imgWidth;
+                let drawHeight = imgHeight;
+                if (drawWidth > maxWidth) {
+                    drawWidth = maxWidth;
+                    drawHeight = (imgHeight * maxWidth) / imgWidth;
+                }
+                if (drawHeight > maxHeight) {
+                    drawHeight = maxHeight;
+                    drawWidth = (imgWidth * maxHeight) / imgHeight;
+                }
+                
+                // 确保画布尺寸是整数
+                drawWidth = Math.floor(drawWidth);
+                drawHeight = Math.floor(drawHeight);
+                
+                if (drawWidth < 1 || drawHeight < 1) {
+                    throw new Error('图片尺寸异常');
+                }
+                
+                canvas.width = drawWidth;
+                canvas.height = drawHeight;
+                
+                const currentIntensity = intensity;
+                const currentSpeed = speed;
+                const currentDetail = detail;
+                
+                let t = useCurrentTime ? time : (performance.now() / 1000) * currentSpeed;
+                
+                // 创建离屏canvas获取原始像素
+                const offCanvas = document.createElement('canvas');
+                offCanvas.width = drawWidth;
+                offCanvas.height = drawHeight;
+                const offCtx = offCanvas.getContext('2d');
+                offCtx.drawImage(originalImage, 0, 0, drawWidth, drawHeight);
+                const imgData = offCtx.getImageData(0, 0, drawWidth, drawHeight);
+                const pixels = imgData.data;
+                
+                const newImgData = offCtx.createImageData(drawWidth, drawHeight);
+                const newPixels = newImgData.data;
+                
+                const maxOffsetLimit = Math.min(currentIntensity, 6);
+                
+                // 逐像素扭曲（优化性能，使用局部变量）
+                for (let y = 0; y < drawHeight; y++) {
+                    const ny = y / drawHeight;
+                    for (let x = 0; x < drawWidth; x++) {
+                        const nx = x / drawWidth;
+                        
+                        // 多层正弦波叠加
+                        const wave1X = Math.sin(nx * Math.PI * 2 * 0.8 + t * 0.7) * Math.cos(ny * Math.PI * 1.2 + t * 0.5);
+                        const wave1Y = Math.cos(ny * Math.PI * 2 * 0.9 + t * 0.6) * Math.sin(nx * Math.PI * 1.5 + t * 0.8);
+                        
+                        const wave2X = Math.sin(nx * Math.PI * currentDetail * 2.5 + t * 1.2) * Math.cos(ny * Math.PI * currentDetail * 2.2 + t * 0.9);
+                        const wave2Y = Math.cos(ny * Math.PI * currentDetail * 2.8 + t * 1.1) * Math.sin(nx * Math.PI * currentDetail * 2.3 + t * 1.0);
+                        
+                        const wave3X = Math.sin(x * 0.05 * currentDetail + t * 1.8) * Math.cos(y * 0.04 * currentDetail + t * 1.4);
+                        const wave3Y = Math.cos(y * 0.06 * currentDetail + t * 1.6) * Math.sin(x * 0.045 * currentDetail + t * 1.9);
+                        
+                        let offsetX = (wave1X * 0.6 + wave2X * 0.3 + wave3X * 0.1) * currentIntensity * 0.35;
+                        let offsetY = (wave1Y * 0.6 + wave2Y * 0.3 + wave3Y * 0.1) * currentIntensity * 0.35;
+                        
+                        // 边缘衰减
+                        const edgeFactorX = 1 - Math.pow(Math.abs(nx - 0.5) * 1.2, 2);
+                        const edgeFactorY = 1 - Math.pow(Math.abs(ny - 0.5) * 1.2, 2);
+                        const edgeFactor = Math.min(edgeFactorX, edgeFactorY) * 0.8 + 0.2;
+                        offsetX *= edgeFactor;
+                        offsetY *= edgeFactor;
+                        
+                        offsetX = Math.min(Math.max(offsetX, -maxOffsetLimit), maxOffsetLimit);
+                        offsetY = Math.min(Math.max(offsetY, -maxOffsetLimit), maxOffsetLimit);
+                        
+                        let srcX = x + offsetX;
+                        let srcY = y + offsetY;
+                        
+                        srcX = Math.min(Math.max(srcX, 0), drawWidth - 1);
+                        srcY = Math.min(Math.max(srcY, 0), drawHeight - 1);
+                        
+                        const srcIdx = (Math.floor(srcY) * drawWidth + Math.floor(srcX)) * 4;
+                        const dstIdx = (y * drawWidth + x) * 4;
+                        
+                        newPixels[dstIdx] = pixels[srcIdx];
+                        newPixels[dstIdx+1] = pixels[srcIdx+1];
+                        newPixels[dstIdx+2] = pixels[srcIdx+2];
+                        newPixels[dstIdx+3] = pixels[srcIdx+3];
+                    }
+                }
+                
+                ctx.putImageData(newImgData, 0, 0);
+            } catch (err) {
+                console.error('绘制错误:', err);
+                showError('绘制失败: ' + err.message);
+            }
+        }
+        
+        function animate() {
+            if (!isAnimating) {
+                if (hasImage && originalImage) {
+                    drawSubtleDistortion(true);
+                }
+                animationId = requestAnimationFrame(animate);
+                return;
+            }
+            
+            if (!hasImage || !originalImage) {
+                animationId = requestAnimationFrame(animate);
+                return;
+            }
+            
+            time += 0.016 * speed;
+            if (time > Math.PI * 10) time = 0;
+            
+            drawSubtleDistortion(true);
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function startAnimation() {
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // 加载图片（带错误处理和压缩）
+        async function loadImage(file) {
+            hideError();
+            
+            if (!file) {
+                showError('请选择图片文件');
+                return;
+            }
+            
+            if (!file.type.match('image.*')) {
+                showError('请上传图片文件（JPG、PNG、WEBP等格式）');
+                return;
+            }
+            
+            // 检查文件大小（超过10MB提示）
+            if (file.size > 10 * 1024 * 1024) {
+                showError('图片较大（超过10MB），会自动压缩处理，请稍候...');
+            }
+            
+            showLoading(true);
+            
+            try {
+                // 读取文件为DataURL
+                const dataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsDataURL(file);
+                });
+                
+                // 加载图片
+                const img = await new Promise((resolve, reject) => {
+                    const image = new Image();
+                    image.onload = () => resolve(image);
+                    image.onerror = () => reject(new Error('图片加载失败，可能格式不支持'));
+                    image.src = dataUrl;
+                });
+                
+                // 检查图片尺寸是否有效
+                if (img.width === 0 || img.height === 0) {
+                    throw new Error('图片尺寸无效');
+                }
+                
+                // 压缩大图
+                let processedImg = img;
+                if (img.width > 1200 || img.height > 1200) {
+                    processedImg = await compressImage(img, 1000, 1000);
+                }
+                
+                originalImage = processedImg;
+                hasImage = true;
+                time = 0;
+                
+                if (!isAnimating) {
+                    isAnimating = true;
+                    animateToggle.innerText = "⏸️ 暂停动态";
+                }
+                
+                // 绘制第一帧
+                drawSubtleDistortion(true);
+                
+                // 启动动画
+                if (animationId) cancelAnimationFrame(animationId);
+                startAnimation();
+                
+                showLoading(false);
+                
+            } catch (err) {
+                console.error('加载错误:', err);
+                showError('图片处理失败: ' + err.message);
+                showLoading(false);
+                hasImage = false;
+                originalImage = null;
+                drawPlaceholder();
+            }
+        }
+        
+        // 拖拽上传
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(255,255,255,0.3)';
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = 'rgba(255,255,255,0.15)';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(255,255,255,0.15)';
+            const file = e.dataTransfer.files[0];
+            if (file) loadImage(file);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                loadImage(e.target.files[0]);
+            }
+        });
+        
+        // 保存视频
+        downloadBtn.addEventListener('click', async () => {
+            if (!hasImage || !originalImage) {
+                showError('请先上传一张图片');
+                return;
+            }
+            
+            try {
+                const stream = canvas.captureStream(30);
+                const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                let chunks = [];
+                mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `subtle_distortion_${Date.now()}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                };
+                mediaRecorder.start();
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                }, 2500);
+            } catch (err) {
+                showError('录制失败: ' + err.message);
+            }
+        });
+        
+        // 绘制占位符
+        function drawPlaceholder() {
+            canvas.width = 600;
+            canvas.height = 400;
+            ctx.fillStyle = '#2c3e66';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬆️ 上传图片 ⬆️', canvas.width/2, canvas.height/2);
+            ctx.font = '12px system-ui';
+            ctx.fillStyle = '#ccc';
+            ctx.fillText('支持 JPG、PNG、WEBP、BMP、GIF 等格式', canvas.width/2, canvas.height/2 + 30);
+        }
+        
+        drawPlaceholder();
+        
+        updateValueDisplays();
+        
+        // 参数变化时刷新
+        intensitySlider.addEventListener('input', () => {
+            intensity = parseFloat(intensitySlider.value);
+            if (hasImage) drawSubtleDistortion(true);
+        });
+        speedSlider.addEventListener('input', () => {
+            speed = parseFloat(speedSlider.value);
+        });
+        detailSlider.addEventListener('input', () => {
+            detail = parseFloat(detailSlider.value);
+            if (hasImage) drawSubtleDistortion(true);
+        });
+    </script>
+</body>
+</html>
